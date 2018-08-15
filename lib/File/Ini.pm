@@ -301,8 +301,6 @@ Interprets four kinds of data structures within a section.%BR%
 Returns a hash with the following keys: =namedLists hashList hashListRHS array namedHashes namedHashesLHS=
 containing the interpreted data.
 
-Option [delimiter] has default value "_".
-
    1. array (anonymous list)
       [index]=[value]
       example: 0=val1 1=val2 ...
@@ -353,7 +351,7 @@ Option [delimiter] has default value "_".
 ###############################################################################
 
 sub parse {
-    my ($self, $section, $key, $defaultHash, $defaultKey, $name) = @_;
+    my ($self, $section, $key, $defaultHash, $defaultKey, $name, $otherProps) = @_;
 
     $defaultKey //= '_default';
     $name //= '.*?';
@@ -366,7 +364,7 @@ sub parse {
         my $value = $pl->get($_);
         # lists
         if (/^ (?<name>$name) (?<index>\d+) $self->{delimiter}? (?<key>.*) $/x) {
-            if ($+{name}) {
+            if ($+{name} || $+{key}) {
                 # 2) name => [ values ]
                 $data->{namedLists}{$+{name}}[$+{index}] = $value;
                 # 3) [ key => value ]
@@ -388,7 +386,7 @@ sub parse {
                 $data->{array}[$+{index}] = $value;
             }
         # hashes
-        } elsif (/^(.+)$self->{delimiter}(.+)$/) {
+        } elsif (/^ (.+) $self->{delimiter} (.+) $/x) {
             # 4) name => key => value
             if (! $data->{namedHashes}{$1} && $defaultHash) {
                 $data->{namedHashes}{$1} = {%$defaultHash};
@@ -400,6 +398,8 @@ sub parse {
                 $data->{namedHashes}{$1}{$key} = $1;
                 $data->{namedHashesLHS}{$2}{$key} = $2;
             }
+        } elsif ($otherProps) {
+            $otherProps->{$_} = $value;
         }
     }
     return $data;
@@ -477,8 +477,8 @@ sub getHashList {
 }
 
 sub getHashListRHS {
-    my ($self, $section, $key, $default, $defaultKey, $name) = @_;
-    my $data = $self->parse($section, $key, $default, $defaultKey, $name) || return;
+    my ($self, $section, $key, $default, $defaultKey, $name, $otherProps) = @_;
+    my $data = $self->parse($section, $key, $default, $defaultKey, $name, $otherProps) || return;
     $data = $data->{hashListRHS};
     shift @$data unless defined $data->[0]; # when list starts at 1
     return wantarray ? @$data : $data;
