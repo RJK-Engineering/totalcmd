@@ -6,7 +6,8 @@ Colors indicated with a * are not HTML colors.
 
 # Install
 
+Required perl modules:
+
 ```
 ppm install Class::AccessorMaker
-ppm install Data::Compare
 ```
