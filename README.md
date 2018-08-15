@@ -6,5 +6,7 @@ Colors indicated with a * are not HTML colors.
 
 # Install
 
+```
 ppm install Class::AccessorMaker
 ppm install Data::Compare
+```
