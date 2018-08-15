@@ -12,8 +12,6 @@ package File::Ini;
 use strict;
 use warnings;
 
-use Data::Compare;
-
 use File::IniCompareResult;
 use PropertyList;
 
@@ -551,10 +549,12 @@ sub setHashList {
 
 ---++ Compare
 
----+++ sectionEquals($ini, $section) -> $result
+---+++ sectionEquals($ini, $section, $compareSub) -> $result
    * =$ini= - =File::Ini= object to compare to
    * =$section= - section name
    * =$result= - boolean
+   * =$compareSub= - reference to compare subroutine accepting two sections as
+                     arguments and returning a boolean
 
 ---+++ compare($ini) -> $result
    * =$ini= - =File::Ini= object to compare to
@@ -564,10 +564,10 @@ sub setHashList {
 ###############################################################################
 
 sub sectionEquals {
-    my ($self, $ini, $section) = @_;
-    my $p1 = $self->getSection($_[1]) || return;
-    my $p2 = $ini->getSection($_[1]) || return;
-    return Compare($p1, $p2);
+    my ($self, $ini, $section, $compareSub) = @_;
+    my $p1 = $self->getSection($section) || return;
+    my $p2 = $ini->getSection($section) || return;
+    return $compareSub->($p1, $p2);
 }
 
 sub compare {
