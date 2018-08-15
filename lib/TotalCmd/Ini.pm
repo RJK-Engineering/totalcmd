@@ -143,7 +143,7 @@ sub read {
     my $self = shift;
     $self->{ini}->read(shift);
 
-    $self->_loadSearches();
+    # $self->_loadSearches();
 
     return $self;
 }
@@ -264,7 +264,7 @@ sub getShortcuts {
 
 sub getColors {
     my ($self) = @_;
-    return $self->{ini}->getHashListRHS("Colors", "nr", undef, "search");
+    return $self->{ini}->getHashListRHS("Colors", "nr", undef, "search", "ColorFilter");
 }
 
 ###############################################################################
