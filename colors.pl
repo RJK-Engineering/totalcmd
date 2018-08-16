@@ -28,16 +28,23 @@ my @colors = $ini->getColors;
 foreach (@colors) {
     print "$_->{nr} $_->{Color} $_->{search}\n" if $opts{verbose};
 }
+print "Colors in INI file: " . scalar @colors . "\n";
 
-my $i = 1;
+my $i = 0;
 open my $fh, '<', $opts{colors} or die "$!";
 while (<$fh>) {
     my ($name, $hex) = /(\*?\w+)\s+#(\w{6})/;
     next unless $name;
+    $i++;
     if ($opts{verbose}) {
         printf "ColorFilter%u=%s*\n", $i, $name;
-        printf "ColorFilter%uColor=%u\n", $i++, hex($hex);
+        printf "ColorFilter%uColor=%u\n", $i, hex($hex);
     }
     push @colors, { Color => hex($hex), search => $name };
 }
 close $fh;
+
+print "Colors in $opts{colors}: $i\n";
+
+# $ini->setColors(\@colors);
+# $ini->save;
