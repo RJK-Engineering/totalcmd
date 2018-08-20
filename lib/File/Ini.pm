@@ -72,6 +72,13 @@ sub totalSections {
     scalar @{$_[0]{sections}};
 }
 
+sub clearSection {
+    my ($self, $section) = @_;
+    my $pl = $self->getPropertyList($section) || return;
+    $self->{keys}{$section} = [];
+    $pl->clear;
+}
+
 sub newSection {
     my ($self, $section) = @_;
     return if $self->getPropertyList($section);
@@ -164,8 +171,11 @@ sub get {
 =pod
 
 ---+++ set($section, $key, $value) -> $value
+   * =$section= - section name
+   * =$key= - key name
+   * =$value= - property value
 Set property.
-Add property to end of section if not existing.
+Add property to end of section if it does not exist.
 
 ---+++ append($section, $key, $value) -> $propertyList
 Add property to end of section.
@@ -174,6 +184,8 @@ Does not check for existing property, may result in duplicates.
 ---+++ prepend($section, $key, $value) -> $propertyList
 Add property to beginning of section.
 Does not check for existing property, may result in duplicates.
+
+---+++ remove($section, $key) -> $value
 
 =cut
 ###############################################################################
@@ -197,6 +209,23 @@ sub append {
     my $pl = $self->getPropertyList($section) || $self->_newSection($section);
     push @{$self->{keys}{$section}}, $key;
     $pl->set($key, $value);
+}
+
+sub remove {
+    my ($self, $section, $key) = @_;
+    my $pl = $self->getPropertyList($section) || return;
+
+    my @keys = @{$self->{keys}{$section}};
+    $self->{keys}{$section} = [ grep { $keys[$_] ne $key } 0..$#keys ];
+
+    # my @keys;
+    # foreach (@$keys) {
+    #     next if $_ eq $key;
+    #     push @keys, $_;
+    # }
+    # $self->{keys}{$section} = \@keys;
+
+    $pl->remove($key);
 }
 
 ###############################################################################
@@ -399,8 +428,9 @@ sub parse {
                 $data->{namedHashes}{$1}{$key} = $1;
                 $data->{namedHashesLHS}{$2}{$key} = $2;
             }
-        } elsif ($opts->{otherProps}) {
-            $opts->{otherProps}{$_} = $value;
+        } else {
+            $opts->{otherProps}{$_} = $value if $opts->{otherProps};
+            push @{$opts->{otherPropsKeys}}, $_ if $opts->{otherPropsKeys};
         }
     }
     return $data;
