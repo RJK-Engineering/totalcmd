@@ -39,9 +39,8 @@ sub new {
 
 ---++ INI Sections
 
----+++ sections() -> @array or $array
+---+++ sections() -> @array or \@array
    * =@array= - section names
-   * =$array= - reference to @array
 
 ---+++ totalSections() -> $numberOfSections
 
@@ -57,9 +56,8 @@ sub new {
 
 Set reference to a section in another =File::Ini= object.
 
----+++ allSections() -> %hash or $hash
+---+++ allSections() -> %hash or \%hash
    * =%hash= - section => property => value
-   * =$hash= - reference to %hash
 
 Return all sections as a hash.
 
@@ -114,19 +112,16 @@ Properties are key/value pairs.
    * =$section= - section name
    * =$propertyList= - =PropertyList= object for the section
 
----+++ getKeys($section) -> @array or $array
+---+++ getKeys($section) -> @array or \@array
    * =$section= - section name
    * =@array= - key array
-   * =$array= - reference to @array
 
----+++ getValues($section) -> @array or $array
+---+++ getValues($section) -> @array or \@array
    * =$section= - section name
    * =@array= - value array
-   * =$array= - reference to @array
 
----+++ getSection($section) -> $hash or %hash
+---+++ getSection($section) -> %hash or \%hash
    * =$section= - section name
-   * =$hash= - property hash reference
    * =%hash= - property hash
 
 ---+++ get($section, $key) -> $value
@@ -289,11 +284,16 @@ sub write {
 
 ---++ Data Structures
 
----+++ parse($section, $key, $default) -> $data
+---+++ parse($section, $opts) -> $data
    * =$section= - section name
-   * =$key= - name of key to add to hashes, pointing to its key if it's in a hash-of-hashes or
-              its index if it's in a list-of-hashes
-   * =$default= - default hash entries to add
+   * =$opts= - options hash:
+               key => name of key to add to hashes, pointing to its key if it's in a hash-of-hashes
+                      or its index if it's in a list-of-hashes
+               defaultHash => default key/value pairs to add to hashes
+               defaultKey => default key for values in a hash that don't have a key name in the INI
+               name => name of the requested list or hash
+               otherProps => reference to a hash where extra properties in the section not
+                             belonging to the requested list or hash will be stored
 
 Interprets four kinds of data structures within a section.%BR%
 Returns a hash with the following keys: =namedLists hashList hashListRHS array namedHashes namedHashesLHS=
@@ -349,10 +349,13 @@ containing the interpreted data.
 ###############################################################################
 
 sub parse {
-    my ($self, $section, $key, $defaultHash, $defaultKey, $name, $otherProps) = @_;
+    my ($self, $section, $opts) = @_;
 
-    $defaultKey //= '_default';
-    $name //= '.*?';
+    $opts //= {};
+    my $key = $opts->{key};
+    my $defaultHash = $opts->{defaultHash};
+    my $defaultKey = $opts->{defaultKey} // '_default';
+    my $name = $opts->{name} // '.*?';
 
     my $pl = $self->getPropertyList($section) || return;
     my @keys = $self->getKeys($section);
@@ -396,8 +399,8 @@ sub parse {
                 $data->{namedHashes}{$1}{$key} = $1;
                 $data->{namedHashesLHS}{$2}{$key} = $2;
             }
-        } elsif ($otherProps) {
-            $otherProps->{$_} = $value;
+        } elsif ($opts->{otherProps}) {
+            $opts->{otherProps}{$_} = $value;
         }
     }
     return $data;
@@ -406,11 +409,10 @@ sub parse {
 ###############################################################################
 =pod
 
----+++ getList($section, $name) -> @array or $array
+---+++ getList($section, $name) -> @array or \@array
    * =$section= - section name
    * =$name= - list name
    * =@array= - the list
-   * =$array= - reference to @array
 
 Get values from a section containing an anonymous or a named list.%BR%
 Get values from a named list if =$name= is defined.%BR%
@@ -422,16 +424,16 @@ Returns a hash of lists.%BR%
 ---+++ getHashList($section) -> ( $hash ) or [ $hash ]
 Returns a list of hashes.%BR%
 
----+++ getHash($section, $name) -> $hash or %hash
+---+++ getHash($section, $opts) -> %hash or \%hash
 Returns a hash of values.%BR%
 
----+++ getHashLHS($section, $name) -> $hash or %hash
+---+++ getHashLHS($section, $opts) -> %hash or \%hash
 Returns a hash of values.%BR%
 
----+++ getHashes($section) -> ( $name => $hash ) or { $name => $hash }
+---+++ getHashes($section, $opts) -> ( $name => $hash ) or { $name => $hash }
 Returns a hash of hashes.%BR%
 
----+++ getHashesLHS($section) -> ( $name => $hash ) or { $name => $hash }
+---+++ getHashesLHS($section, $opts) -> ( $name => $hash ) or { $name => $hash }
 Returns a hash of hashes.%BR%
 
 ---+++ setList($section, $array, $name) -> $propertyList
@@ -467,16 +469,16 @@ sub getLists {
 }
 
 sub getHashList {
-    my ($self, $section, $key, $default) = @_;
-    my $data = $self->parse($section, $key, $default) || return;
+    my ($self, $section, $opts) = @_;
+    my $data = $self->parse($section, $opts) || return;
     $data = $data->{hashList};
     shift @$data unless defined $data->[0]; # when list starts at 1
     return wantarray ? @$data : $data;
 }
 
 sub getHashListRHS {
-    my ($self, $section, $key, $default, $defaultKey, $name, $otherProps) = @_;
-    my $data = $self->parse($section, $key, $default, $defaultKey, $name, $otherProps) || return;
+    my ($self, $section, $opts) = @_;
+    my $data = $self->parse($section, $opts) || return;
     $data = $data->{hashListRHS};
     shift @$data unless defined $data->[0]; # when list starts at 1
     return wantarray ? @$data : $data;
@@ -499,15 +501,15 @@ sub getHashLHS {
 }
 
 sub getHashes {
-    my ($self, $section, $key) = @_;
-    my $data = $self->parse($section, $key) || return;
+    my ($self, $section, $opts) = @_;
+    my $data = $self->parse($section, $opts) || return;
     $data = $data->{namedHashes};
     return wantarray ? %$data : $data;
 }
 
 sub getHashesLHS {
-    my ($self, $section, $key) = @_;
-    my $data = $self->parse($section, $key) || return;
+    my ($self, $section, $opts) = @_;
+    my $data = $self->parse($section, $opts) || return;
     $data = $data->{namedHashesLHS};
     return wantarray ? %$data : $data;
 }
@@ -549,12 +551,11 @@ sub setHashList {
 
 ---++ Compare
 
----+++ sectionEquals($ini, $section, $compareSub) -> $result
+---+++ sectionEquals($ini, $section, \&compareSub) -> $result
    * =$ini= - =File::Ini= object to compare to
    * =$section= - section name
+   * =&compareSub= - compare subroutine accepting two sections as arguments and returning a boolean
    * =$result= - boolean
-   * =$compareSub= - reference to compare subroutine accepting two sections as
-                     arguments and returning a boolean
 
 ---+++ compare($ini) -> $result
    * =$ini= - =File::Ini= object to compare to
