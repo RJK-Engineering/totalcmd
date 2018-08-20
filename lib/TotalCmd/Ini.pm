@@ -188,10 +188,10 @@ sub getMenuItem {
 
 sub getMenuItems {
     my ($self, $menu, $submenuNr) = @_;
-    my @items = $self->{ini}->getHashList(
-        $menu, 'number',
-        { source => $menu eq 'user' ? 'StartMenu' : $menu }
-    );
+    my @items = $self->{ini}->getHashList($menu, {
+        key => 'number',
+        defaultHash => { source => $menu eq 'user' ? 'StartMenu' : $menu },
+    });
     if (defined $submenuNr) {
         @items = $self->_getSubmenu(\@items, $submenuNr);
     }
@@ -241,12 +241,17 @@ sub setMenu {
 
 ---++ INI Sections
 
----+++ getSection($section) -> $hash or %hash
+---+++ getSection($section) -> %hash or \%hash
 
 ---+++ getShortcuts() -> %shortcuts or \%shortcuts
 Get =$keyCombo => $commandName= hash.
 
 ---++++ getColors() -> \@colors
+=@colors= - List of { Color => $color, Search => $search }
+
+---++++ setColors(\@colors) -> $self
+=@colors= - List of { Color => $color, Search => $search }
+=$self= - This TotalCmd::Ini object
 
 =cut
 ###############################################################################
@@ -263,8 +268,39 @@ sub getShortcuts {
 }
 
 sub getColors {
-    my ($self) = @_;
-    return $self->{ini}->getHashListRHS("Colors", "nr", undef, "search", "ColorFilter");
+    my ($self, $otherProps) = @_;
+    return $self->{ini}->getHashListRHS("Colors", {
+        key => "nr",
+        name => "ColorFilter",
+        defaultKey => "Search",
+        otherProps => $otherProps,
+    });
+}
+
+sub setColors {
+    my ($self, $colors) = @_;
+
+    my (%otherProps, @keys);
+    $self->{ini}->getHashListRHS("Colors", {
+        name => "ColorFilter",
+        otherProps => \%otherProps,
+        otherPropsKeys => \@keys,
+    });
+
+    $self->{ini}->clearSection("Colors");
+    foreach (@keys) {
+        $self->{ini}->set("Colors", $_, $otherProps{$_});
+    }
+
+    my $i = 1;
+    foreach (@$colors) {
+        $self->{ini}->set("Colors", "ColorFilter${i}", $_->{Search});
+        $self->{ini}->set("Colors", "ColorFilter${i}Color", $_->{Color});
+    } continue {
+        $i++;
+    }
+
+    return $self;
 }
 
 ###############################################################################
@@ -276,8 +312,8 @@ sub getColors {
 ---+++ nonSpecialSearches() -> @searches
 List of non special searches sorted by name.
 ---+++ getSearch($name) -> TotalCmd::Search
----+++ fileTypes() -> $types or @types
----+++ getFileTypes($filename) -> $types or @types
+---+++ fileTypes() -> @types or \@types
+---+++ getFileTypes($filename) -> @types or \@types
 ---+++ matchFileType($type, $filename) -> $boolean
 ---+++ inCategory($filename, $category) -> $boolean
 ---+++ _loadSearches()
@@ -352,7 +388,7 @@ sub inCategory {
 
 sub _loadSearches {
     my $self = shift;
-    my %s = $self->{ini}->getHashes('searches', 'name');
+    my %s = $self->{ini}->getHashes('searches', { key => 'name' });
     foreach (values %s) {
         $self->{searches}{$_->{name}} = new TotalCmd::Search(%$_);
     }
