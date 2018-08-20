@@ -5,52 +5,45 @@ A Total Commander command.
 
 ---++ Example
 
-%TABLE{tablerules="none" databg="none" cellpadding="0" columnwidths="70"}%
-<span style='font-family: "Bitstream Vera Sans Mono","Andale Mono",Courier,monospace;'>
-|  *1.&nbsp;* | &nbsp;use TotalCmd::Command; |
-|  *2.&nbsp;* | &nbsp;use Try::Tiny; |
-|  *3.&nbsp;* | &nbsp; |
-|  *4.&nbsp;* | &nbsp;my $cmd = new TotalCmd::Command( |
-|  *5.&nbsp;* | &nbsp;&nbsp; &nbsp; menu =&gt; &quot;Name&quot;, |
-|  *6.&nbsp;* | &nbsp;&nbsp; &nbsp; cmd =&gt; &quot;cmd&quot;, |
-|  *7.&nbsp;* | &nbsp;&nbsp; &nbsp; param =&gt; &quot;/c dir &#37;P&#37;N&quot;, |
-|  *8.&nbsp;* | &nbsp;); |
-|  *9.&nbsp;* | &nbsp; |
-|  *10.&nbsp;* | &nbsp;try { |
-|  *11.&nbsp;* | &nbsp;&nbsp; &nbsp; $cmd-&gt;execute( |
-|  *12.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; { |
-|  *13.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; source =&gt; &quot;C:\\&quot;, |
-|  *14.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; target =&gt; undef, |
-|  *15.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; sourceSelection =&gt; [], |
-|  *16.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; targetSelection =&gt; [], |
-|  *17.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; }, |
-|  *18.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; sub { |
-|  *19.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; my $args = shift; |
-|  *20.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; printf &quot;&#37;s &#37;s\n&quot;, $cmd-&gt;cmd, $args; |
-|  *21.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; system &quot;$cmd-&gt;{cmd} $args&quot;; |
-|  *22.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; } |
-|  *23.&nbsp;* | &nbsp;&nbsp; &nbsp; ); |
-|  *24.&nbsp;* | &nbsp;} catch { |
-|  *25.&nbsp;* | &nbsp;&nbsp; &nbsp; if ( $_-&gt;isa(&#39;TotalCmd::Command::UnsupportedParameterException&#39;) ) { |
-|  *26.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; warn sprintf &quot;Unsupported parameter: &#37;s&quot;, $_-&gt;parameter(); |
-|  *27.&nbsp;* | &nbsp;&nbsp; &nbsp; } elsif ( $_-&gt;isa(&#39;TotalCmd::Command::ListFileException&#39;) ) { |
-|  *28.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; warn sprintf &quot;&#37;s: &#37;s&quot;, $_-&gt;error, $_-&gt;path(); |
-|  *29.&nbsp;* | &nbsp;&nbsp; &nbsp; } elsif ( $_-&gt;isa(&#39;TotalCmd::Command::NoFileException&#39;) ) { |
-|  *30.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; warn sprintf &quot;&#37;s: &#37;s&quot;, $_-&gt;error, $_-&gt;path(); |
-|  *31.&nbsp;* | &nbsp;&nbsp; &nbsp; } elsif ( $_-&gt;isa(&#39;TotalCmd::Command::NoShortNameException&#39;) ) { |
-|  *32.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; warn sprintf &quot;&#37;s: &#37;s&quot;, $_-&gt;error, $_-&gt;path(); |
-|  *33.&nbsp;* | &nbsp;&nbsp; &nbsp; } elsif ( $_-&gt;isa(&#39;TotalCmd::Command::Exception&#39;) ) { |
-|  *34.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; warn $_-&gt;error(). &quot;.&quot;; |
-|  *35.&nbsp;* | &nbsp;&nbsp; &nbsp; } else { |
-|  *36.&nbsp;* | &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; die $_; |
-|  *37.&nbsp;* | &nbsp;&nbsp; &nbsp; } |
-|  *38.&nbsp;* | &nbsp;}; |
-</span>
-
-Output:
-
 <verbatim>
-No source file specified: C:\temp\ at [file].pl line 30.
+use TotalCmd::Command;
+use Try::Tiny;
+
+my $cmd = new TotalCmd::Command(
+    menu => "Name",
+    cmd => "cmd",
+    param => "/c dir %P%N",
+);
+
+try {
+    $cmd->execute(
+        {
+            source => "C:\\",
+            target => undef,
+            sourceSelection => [],
+            targetSelection => [],
+        },
+        sub {
+            my $args = shift;
+            printf "%s %s\n", $cmd->cmd, $args;
+            system "$cmd->{cmd} $args";
+        }
+    );
+} catch {
+    if ( $_->isa('TotalCmd::Command::UnsupportedParameterException') ) {
+        warn sprintf "Unsupported parameter: %s", $_->parameter();
+    } elsif ( $_->isa('TotalCmd::Command::ListFileException') ) {
+        warn sprintf "%s: %s", $_->error, $_->path();
+    } elsif ( $_->isa('TotalCmd::Command::NoFileException') ) {
+        warn sprintf "%s: %s", $_->error, $_->path();
+    } elsif ( $_->isa('TotalCmd::Command::NoShortNameException') ) {
+        warn sprintf "%s: %s", $_->error, $_->path();
+    } elsif ( $_->isa('TotalCmd::Command::Exception') ) {
+        warn $_->error(). ".";
+    } else {
+        die $_;
+    }
+};
 </verbatim>
 
 =cut
@@ -205,17 +198,9 @@ sub execute {
     my ($self, $opts, $callback) = @_;
 
     if ($self->{param}) {
-        #~ print "!\n";
         my $params = $self->getParams($opts);
-        #~ print "!!\n";
-        #~ use Data::Dumper;
-        #~ $Data::Dumper::Sortkeys = 1;
-        #~ print Dumper($params);
-
         my $argStr = $self->getArgStr($params);
-#~ print "!!!\n";
         $callback->($argStr);
-#~ print "!!!!\n";
         $self->finish($params);
     } else {
         $callback->("");
@@ -320,7 +305,6 @@ sub getParams {
             my $fh;
             ($fh, $params{sourceListFile}) = TotalCmd::Utils::TempFile();
             if ($fh) {
-                #~ info "TempListFile: $params{sourceListFile}";
                 print $fh "$_\n" foreach @{$opts->{sourceSelection}};
                 close $fh;
             } elsif (defined $params{sourceListFile}) {
@@ -447,62 +431,6 @@ used for command execution.
 
 =cut
 ###############################################################################
-
-sub getArgStr_v1 {
-    my ($self, $params) = @_;
-
-    my $quote = sub {
-        $_[0] =~ /\s/ ? qq("$_[0]") : $_[0];
-    };
-
-    my @s = split /%
-        (?:
-              ([$directoryParams]) % ([$filenameParams])
-            | ([$directoryParams]) % ([$argsParams])
-            |  [$modifierParams]   % ([$directoryParams])
-            | ([$filenameParams])
-            | ([$argsParams])
-            | ([$allParams])
-            | (%)
-            | (.)
-        ) /x, $self->{param};
-
-    my $i = 0;
-    my $s = "";
-
-    while ($i < @s) {
-        $s .= $s[$i++];
-        last if $i >= @s;
-
-        my $c = 0;
-        if ($s[$i]) {
-            $s .= $quote->($params->{$s[$i + $c++]}. $params->{$s[$i + $c]});
-        } elsif ($s[$i + ($c+=2)]) {
-            my $dir = $params->{$s[$i + $c++]};
-            my $files = $params->{$s[$i + $c]};
-            $s .= join " ", map { $quote->($dir. $_) } @$files;
-        } elsif ($s[$i + ($c+=2)]) {
-            die "!!!!!!!!!!!!!$s[$i + $c]" if not defined $params->{$s[$i + $c]};
-            $s .= $params->{$s[$i + $c]};
-        } elsif ($s[$i + ($c+=1)]) {
-            die "!!!!!!!!!!!!!$s[$i + $c]" if not defined $params->{$s[$i + $c]};
-            $s .= $quote->($params->{$s[$i + $c]});
-        } elsif ($s[$i + ($c+=1)]) {
-            die "!!!!!!!!!!!!!$s[$i + $c]" if not defined $params->{$s[$i + $c]};
-            my $files = $params->{$s[$i + $c]};
-            $s .= join " ", map { $quote->($_) } @$files;
-        } elsif ($s[$i + ($c+=1)]) {
-            die "!!!!!!!!!!!!!$s[$i + $c]" if not defined $params->{$s[$i + $c]};
-            $s .= $params->{$s[$i + $c]};
-        } elsif ($s[$i + ($c+=1)]) {
-            $s .= '%';
-        } else {
-            throw TotalCmd::Command::UnsupportedParameterException($s[$i + $c+1]);
-        }
-        $i += 10;
-    }
-    return $s;
-}
 
 sub getArgStr {
     my ($self, $params) = @_;
