@@ -424,6 +424,9 @@ Returns a hash of lists.%BR%
 ---+++ getHashList($section) -> ( $hash ) or [ $hash ]
 Returns a list of hashes.%BR%
 
+---+++ getHashListRHS($section) -> ( $hash ) or [ $hash ]
+Returns a list of hashes.%BR%
+
 ---+++ getHash($section, $opts) -> %hash or \%hash
 Returns a hash of values.%BR%
 
