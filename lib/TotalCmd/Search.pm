@@ -150,11 +150,11 @@ use Exception::Class (
 
 use DateTime::Format::Strptime;
 
-our $timeZone;
+our $timeZone = 'Europe/Amsterdam';
 my $strptime = DateTime::Format::Strptime->new(
     on_error => sub { throw TotalCmd::Search::Exception($_[1]) },
     pattern => '%d%m%Y%H%M%S',
-    time_zone => $timeZone // DateTime::TimeZone::Local->TimeZone()
+    time_zone => $timeZone
 );
 
 our @timeUnits = qw(
@@ -463,11 +463,18 @@ sub _loadCategory {
 
 ---++ Class methods
 
+---+++ !DetermineLocalTimeZone -> $timeZone
+Determines, returns and sets =$TotalCmd::Search::timeZone=.
+
 ---+++ !GetFileTypes($filename) -> $types or @types
 Lookup file types in file type specifications.
 
 =cut
 ###############################################################################
+
+sub DetermineLocalTimeZone {
+    $timeZone = DateTime::TimeZone::Local->TimeZone();
+}
 
 sub GetFileTypes {
     my $filename = shift;
